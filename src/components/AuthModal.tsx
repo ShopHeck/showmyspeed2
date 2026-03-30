@@ -84,7 +84,6 @@ export function AuthModal({ open, onClose, defaultTab = 'signin' }: AuthModalPro
         options: { redirectTo: window.location.origin },
       })
       if (error) throw error
-      // Redirect happens automatically
     } catch {
       setError('Google sign-in failed. Please try again.')
       setLoading(false)
@@ -95,16 +94,14 @@ export function AuthModal({ open, onClose, defaultTab = 'signin' }: AuthModalPro
     <AnimatePresence>
       {open && (
         <>
-          {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
           />
 
-          {/* Modal */}
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
@@ -112,14 +109,14 @@ export function AuthModal({ open, onClose, defaultTab = 'signin' }: AuthModalPro
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="relative w-full max-w-md bg-card border border-border/60 rounded-2xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md glass-card shadow-2xl overflow-hidden"
               initial={{ scale: 0.95, y: 10 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 10 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               onClick={e => e.stopPropagation()}
             >
-              {/* Glow top */}
+              {/* Gradient top line */}
               <div className="absolute top-0 inset-x-0 h-px" style={{ background: 'var(--gradient-primary)' }} />
               <div
                 className="absolute top-0 inset-x-0 h-24 opacity-20 pointer-events-none"
@@ -127,34 +124,31 @@ export function AuthModal({ open, onClose, defaultTab = 'signin' }: AuthModalPro
               />
 
               <div className="relative p-6 sm:p-8">
-                {/* Close */}
                 <button
                   onClick={onClose}
-                  className="absolute top-4 right-4 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                  className="absolute top-4 right-4 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/[0.06] transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
 
-                {/* Logo */}
                 <div className="flex items-center gap-2 mb-6">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center glow-primary">
                     <Zap className="w-4 h-4 text-primary" />
                   </div>
-                  <span className="font-bold text-base" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <span className="font-display font-bold text-base">
                     <span className="text-foreground">show</span>
-                    <span className="text-primary">myspeed</span>
+                    <span className="gradient-text">myspeed</span>
                   </span>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex rounded-lg bg-secondary/60 p-1 mb-6">
+                <div className="flex rounded-xl bg-white/[0.04] border border-white/[0.06] p-1 mb-6">
                   {(['signin', 'signup'] as const).map(t => (
                     <button
                       key={t}
                       onClick={() => switchTab(t)}
-                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                      className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
                         tab === t
-                          ? 'bg-background text-foreground shadow-sm'
+                          ? 'bg-white/[0.08] text-foreground shadow-sm'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -164,7 +158,7 @@ export function AuthModal({ open, onClose, defaultTab = 'signin' }: AuthModalPro
                 </div>
 
                 <div className="mb-1">
-                  <h2 className="text-xl font-bold text-foreground" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <h2 className="text-xl font-display font-bold text-foreground">
                     {tab === 'signin' ? 'Welcome back' : 'Join ShowMySpeed'}
                   </h2>
                   <p className="text-sm text-muted-foreground mt-0.5">
@@ -174,12 +168,11 @@ export function AuthModal({ open, onClose, defaultTab = 'signin' }: AuthModalPro
                   </p>
                 </div>
 
-                {/* Google button */}
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
                   disabled={loading}
-                  className="mt-5 w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border border-border/60 bg-secondary/40 text-sm font-medium text-foreground hover:bg-secondary hover:border-border transition-colors disabled:opacity-50"
+                  className="mt-5 w-full btn-ghost flex items-center justify-center gap-3 py-2.5 disabled:opacity-50"
                 >
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                     <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
@@ -191,12 +184,11 @@ export function AuthModal({ open, onClose, defaultTab = 'signin' }: AuthModalPro
                 </button>
 
                 <div className="flex items-center gap-3 my-4">
-                  <div className="flex-1 h-px bg-border/50" />
+                  <div className="flex-1 h-px bg-white/[0.06]" />
                   <span className="text-xs text-muted-foreground">or</span>
-                  <div className="flex-1 h-px bg-border/50" />
+                  <div className="flex-1 h-px bg-white/[0.06]" />
                 </div>
 
-                {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-3">
                   {tab === 'signup' && (
                     <div className="relative">
@@ -206,7 +198,7 @@ export function AuthModal({ open, onClose, defaultTab = 'signin' }: AuthModalPro
                         placeholder="Display name (optional)"
                         value={displayName}
                         onChange={e => setDisplayName(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-border/60 bg-secondary/30 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors"
+                        className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-colors"
                       />
                     </div>
                   )}
@@ -219,7 +211,7 @@ export function AuthModal({ open, onClose, defaultTab = 'signin' }: AuthModalPro
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       required
-                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-border/60 bg-secondary/30 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors"
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-colors"
                     />
                   </div>
 
@@ -232,7 +224,7 @@ export function AuthModal({ open, onClose, defaultTab = 'signin' }: AuthModalPro
                       onChange={e => setPassword(e.target.value)}
                       required
                       minLength={tab === 'signup' ? 6 : undefined}
-                      className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-border/60 bg-secondary/30 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors"
+                      className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-colors"
                     />
                     <button
                       type="button"
@@ -243,7 +235,6 @@ export function AuthModal({ open, onClose, defaultTab = 'signin' }: AuthModalPro
                     </button>
                   </div>
 
-                  {/* Error / Success */}
                   <AnimatePresence mode="wait">
                     {error && (
                       <motion.p
@@ -272,8 +263,7 @@ export function AuthModal({ open, onClose, defaultTab = 'signin' }: AuthModalPro
                   <button
                     type="submit"
                     disabled={loading || !email || !password}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ background: 'var(--gradient-primary)' }}
+                    className="w-full btn-primary flex items-center justify-center gap-2 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />

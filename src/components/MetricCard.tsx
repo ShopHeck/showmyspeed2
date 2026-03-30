@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion'
+
 interface MetricCardProps {
   label: string
   value: number
@@ -10,13 +12,20 @@ export function MetricCard({ label, value, unit, icon, color }: MetricCardProps)
   const display = value >= 100 ? Math.round(value) : Math.round(value * 10) / 10
 
   return (
-    <div className="flex flex-col items-center p-3 rounded-xl border border-border/40 bg-card/30">
-      <div className={`mb-1 ${color}`}>{icon}</div>
-      <div className={`text-xl font-black ${color}`} style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+    <motion.div
+      className="glass-card-hover flex flex-col items-center p-4 group"
+      whileHover={{ y: -2 }}
+    >
+      <div className={`mb-1.5 ${color} opacity-70 group-hover:opacity-100 transition-opacity`}>
+        {icon}
+      </div>
+      <div
+        className={`text-2xl font-display font-black ${color}`}
+      >
         {display}
       </div>
-      <div className="text-xs text-muted-foreground">{unit}</div>
-      <div className="text-xs text-muted-foreground/70 mt-0.5">{label}</div>
-    </div>
+      <div className="text-[11px] text-muted-foreground font-medium">{unit}</div>
+      <div className="text-[11px] text-muted-foreground/60 mt-0.5">{label}</div>
+    </motion.div>
   )
 }
