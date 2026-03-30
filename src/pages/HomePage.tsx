@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Activity, ArrowDown, ArrowUp, Timer, Wifi, Globe, Shield, Zap } from 'lucide-react'
 import { SpeedGauge } from '../components/SpeedGauge'
 import { MetricCard } from '../components/MetricCard'
+import { DataFlowAnimation } from '../components/DataFlowAnimation'
 import {
   measurePing,
   measureDownload,
@@ -60,7 +61,6 @@ export function HomePage() {
       setGaugeValue(downloadMbps)
       setPhase('done')
 
-      // Save to public speed_results table (anonymous)
       try {
         await supabase.from('speed_results').insert({
           download_mbps: finalResult.downloadMbps,
@@ -77,7 +77,6 @@ export function HomePage() {
         // Non-blocking
       }
 
-      // Save to user's personal history if authenticated
       if (user) {
         try {
           await supabase.from('user_speed_history').insert({
@@ -124,134 +123,206 @@ export function HomePage() {
     done: 'Test complete!',
   }
 
+  const phaseIcon: Record<TestPhase, string> = {
+    idle: '',
+    ping: 'Ping',
+    download: 'Download',
+    upload: 'Upload',
+    done: 'Complete',
+  }
+
   const gaugeMax = phase === 'upload' ? 200 : 1000
+  const isRunning = phase !== 'idle' && phase !== 'done'
+  const intensity = gaugeMax > 0 ? Math.min(gaugeValue / gaugeMax, 1) : 0
 
   return (
-    <div className="min-h-screen bg-background">
-      <div
-        className="absolute inset-x-0 top-0 h-[600px] pointer-events-none"
-        style={{ background: 'var(--gradient-hero)' }}
-      />
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Background gradient layers */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div
+          className="absolute inset-x-0 top-0 h-[800px]"
+          style={{ background: 'var(--gradient-hero)' }}
+        />
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-[0.04]"
+          style={{ background: 'radial-gradient(circle, hsl(265 89% 66%) 0%, transparent 70%)' }}
+        />
+      </div>
 
-      <div className="relative pt-28 pb-20 px-4 sm:px-6 max-w-5xl mx-auto">
+      {/* Full-screen data flow animation hero */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <DataFlowAnimation phase={phase} intensity={intensity} />
+      </div>
+
+      <div className="relative z-10 pt-24 pb-20 px-4 sm:px-6 max-w-5xl mx-auto">
+        {/* Hero section */}
         <motion.div
-          className="text-center mb-12"
+          className="text-center mb-14"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-xs font-medium mb-5">
+          <motion.div
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-medium mb-6"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+          >
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             Free Internet Speed Test
-          </div>
-          <h1
-            className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-foreground mb-4"
-            style={{ fontFamily: 'Space Grotesk, sans-serif' }}
-          >
+          </motion.div>
+
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-bold tracking-tight text-foreground mb-5 leading-[1.1]">
             How fast is your
-            <span
-              className="block"
-              style={{
-                background: 'var(--gradient-primary)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
+            <span className="block gradient-text mt-1">
               internet?
             </span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            Test your download, upload, and ping in seconds. Then see how you compare to others — and find faster plans near you.
+
+          <p className="text-base sm:text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
+            Test your download, upload, and ping in seconds.
+            <span className="hidden sm:inline"> Then see how you compare to others.</span>
           </p>
         </motion.div>
 
+        {/* Speed test card */}
         <motion.div
           className="flex flex-col items-center"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.15 }}
         >
-          <div className="relative p-8 sm:p-12 rounded-2xl border border-border/50 bg-card/30 backdrop-blur-sm w-full max-w-lg text-center">
-            <div className="absolute inset-0 rounded-2xl pointer-events-none overflow-hidden">
-              <div
-                className="absolute inset-0 opacity-30"
-                style={{ background: 'radial-gradient(circle at 50% 40%, hsl(197 100% 50% / 0.15) 0%, transparent 60%)' }}
-              />
-            </div>
-
-            <div className="flex justify-center mb-4">
-              <SpeedGauge
-                value={phase === 'idle' || phase === 'ping' ? 0 : gaugeValue}
-                maxValue={gaugeMax}
-                size={240}
-                label={phase === 'upload' ? 'Upload Mbps' : 'Download Mbps'}
-              />
-            </div>
-
-            <AnimatePresence mode="wait">
-              {phase !== 'idle' && (
+          <div
+            className={`relative w-full max-w-xl transition-all duration-700 ${
+              isRunning ? 'scale-[1.02]' : ''
+            }`}
+          >
+            {/* Main test card */}
+            <div className={`glass-card p-8 sm:p-12 text-center transition-all duration-500 ${
+              isRunning ? 'glow-primary-strong' : phase === 'done' ? 'glow-primary' : ''
+            }`}>
+              {/* Phase indicator pills */}
+              {isRunning && (
                 <motion.div
-                  key={phase}
-                  initial={{ opacity: 0, y: 5 }}
+                  className="flex items-center justify-center gap-2 mb-6"
+                  initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  className="mb-4"
                 >
-                  <p className="text-sm text-primary font-medium">{phaseLabel[phase]}</p>
-                  {phase === 'ping' && (
-                    <div className="flex items-center justify-center gap-1 mt-2">
-                      {[0, 1, 2, 3].map(i => (
-                        <div
-                          key={i}
-                          className="w-1.5 rounded-full bg-primary animate-pulse"
-                          style={{ height: `${(i + 1) * 6}px`, animationDelay: `${i * 0.15}s` }}
-                        />
-                      ))}
+                  {['ping', 'download', 'upload'].map((p) => (
+                    <div
+                      key={p}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+                        phase === p
+                          ? 'bg-primary/15 text-primary border border-primary/30'
+                          : (['ping', 'download', 'upload'].indexOf(phase) > ['ping', 'download', 'upload'].indexOf(p))
+                          ? 'bg-white/[0.04] text-muted-foreground/50 border border-transparent'
+                          : 'bg-white/[0.02] text-muted-foreground/30 border border-transparent'
+                      }`}
+                    >
+                      {phase === p && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                      )}
+                      {p.charAt(0).toUpperCase() + p.slice(1)}
                     </div>
+                  ))}
+                </motion.div>
+              )}
+
+              {/* Gauge */}
+              <div className="relative flex justify-center mb-4 z-10">
+                <SpeedGauge
+                  value={phase === 'idle' || phase === 'ping' ? 0 : gaugeValue}
+                  maxValue={gaugeMax}
+                  size={260}
+                  label={phase === 'upload' ? 'Upload Mbps' : 'Download Mbps'}
+                />
+              </div>
+
+              {/* Phase label */}
+              <AnimatePresence mode="wait">
+                {phase !== 'idle' && (
+                  <motion.div
+                    key={phase}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="mb-6 relative z-10"
+                  >
+                    <p className="text-sm font-medium text-primary">{phaseLabel[phase]}</p>
+                    {phase === 'ping' && (
+                      <div className="flex items-center justify-center gap-1.5 mt-3">
+                        {[0, 1, 2, 3, 4].map(i => (
+                          <motion.div
+                            key={i}
+                            className="w-1 rounded-full bg-primary"
+                            animate={{ height: [4, 16, 4] }}
+                            transition={{
+                              duration: 0.8,
+                              repeat: Infinity,
+                              delay: i * 0.1,
+                              ease: 'easeInOut',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Start button */}
+              {phase === 'idle' && (
+                <motion.button
+                  onClick={runTest}
+                  className="btn-primary px-12 py-4 text-base font-bold group relative z-10"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Activity className="w-5 h-5 group-hover:animate-pulse" />
+                    Start Speed Test
+                  </span>
+                </motion.button>
+              )}
+
+              {error && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-destructive text-sm mt-4 relative z-10"
+                >
+                  {error}
+                </motion.p>
+              )}
+
+              {/* ISP info */}
+              {ipInfo && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground relative z-10"
+                >
+                  <Wifi className="w-3.5 h-3.5" />
+                  <span>{ipInfo.isp}</span>
+                  {ipInfo.city && (
+                    <>
+                      <span className="text-muted-foreground/30">|</span>
+                      <span>{ipInfo.city}, {ipInfo.country}</span>
+                    </>
                   )}
                 </motion.div>
               )}
-            </AnimatePresence>
-
-            {phase === 'idle' && (
-              <motion.button
-                onClick={runTest}
-                className="relative group px-10 py-4 rounded-xl text-base font-bold text-primary-foreground overflow-hidden transition-all active:scale-95"
-                style={{ background: 'var(--gradient-primary)' }}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                <span className="relative z-10 flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
-                  Start Speed Test
-                </span>
-                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </motion.button>
-            )}
-
-            {error && <p className="text-destructive text-sm mt-3">{error}</p>}
-
-            {ipInfo && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground"
-              >
-                <Wifi className="w-3.5 h-3.5" />
-                <span>{ipInfo.isp}</span>
-                {ipInfo.city && <span className="text-muted-foreground/50">·</span>}
-                {ipInfo.city && <span>{ipInfo.city}, {ipInfo.country}</span>}
-              </motion.div>
-            )}
+            </div>
           </div>
 
+          {/* Result metrics */}
           <AnimatePresence>
             {result && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 w-full max-w-lg"
+                transition={{ delay: 0.1 }}
+                className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 w-full max-w-xl"
               >
                 <MetricCard label="Download" value={result.downloadMbps} unit="Mbps" icon={<ArrowDown className="w-4 h-4" />} color="text-primary" />
                 <MetricCard label="Upload" value={result.uploadMbps} unit="Mbps" icon={<ArrowUp className="w-4 h-4" />} color="text-accent" />
@@ -261,85 +332,121 @@ export function HomePage() {
             )}
           </AnimatePresence>
 
+          {/* National avg comparison */}
           {result && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="mt-4 p-4 rounded-xl border border-border/50 bg-card/30 w-full max-w-lg text-sm"
+              className="mt-4 w-full max-w-xl"
             >
-              <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wider">
-                vs. National Average
-              </p>
-              <div className="flex items-center justify-around gap-4">
-                {[
-                  { label: 'Download', yours: result.downloadMbps, avg: ISP_NATIONAL_AVG.download, unit: 'Mbps' },
-                  { label: 'Upload', yours: result.uploadMbps, avg: ISP_NATIONAL_AVG.upload, unit: 'Mbps' },
-                  { label: 'Ping', yours: result.pingMs, avg: ISP_NATIONAL_AVG.ping, unit: 'ms', lowerIsBetter: true },
-                ].map(stat => {
-                  const better = stat.lowerIsBetter ? stat.yours < stat.avg : stat.yours > stat.avg
-                  return (
-                    <div key={stat.label} className="text-center">
-                      <div className={`text-base font-bold ${better ? 'text-green-400' : 'text-orange-400'}`}>
-                        {better ? '+' : ''}
-                        {stat.lowerIsBetter
-                          ? Math.round(stat.avg - stat.yours)
-                          : Math.round(stat.yours - stat.avg)}{' '}
-                        <span className="text-xs font-normal">{stat.unit}</span>
+              <div className="glass-card p-5">
+                <p className="text-muted-foreground mb-3 text-xs font-medium uppercase tracking-wider">
+                  vs. National Average
+                </p>
+                <div className="flex items-center justify-around gap-4">
+                  {[
+                    { label: 'Download', yours: result.downloadMbps, avg: ISP_NATIONAL_AVG.download, unit: 'Mbps' },
+                    { label: 'Upload', yours: result.uploadMbps, avg: ISP_NATIONAL_AVG.upload, unit: 'Mbps' },
+                    { label: 'Ping', yours: result.pingMs, avg: ISP_NATIONAL_AVG.ping, unit: 'ms', lowerIsBetter: true },
+                  ].map(stat => {
+                    const better = stat.lowerIsBetter ? stat.yours < stat.avg : stat.yours > stat.avg
+                    return (
+                      <div key={stat.label} className="text-center">
+                        <div className={`text-lg font-display font-bold ${better ? 'text-emerald-400' : 'text-orange-400'}`}>
+                          {better ? '+' : ''}
+                          {stat.lowerIsBetter
+                            ? Math.round(stat.avg - stat.yours)
+                            : Math.round(stat.yours - stat.avg)}{' '}
+                          <span className="text-xs font-normal opacity-70">{stat.unit}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{stat.label}</div>
                       </div>
-                      <div className="text-xs text-muted-foreground">{stat.label}</div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
             </motion.div>
           )}
         </motion.div>
 
+        {/* Feature cards */}
         <motion.div
-          className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-24"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-24"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
           {[
-            { icon: <Zap className="w-5 h-5 text-primary" />, title: 'Real-Time Test', desc: 'Accurate browser-based measurement using Cloudflare edge servers.' },
-            { icon: <Globe className="w-5 h-5 text-accent" />, title: 'ISP Comparison', desc: 'See how your plan stacks up and discover faster options in your area.' },
-            { icon: <Shield className="w-5 h-5 text-purple-400" />, title: 'Privacy First', desc: 'No personal data stored. Results are anonymous and aggregated.' },
-          ].map(f => (
-            <div key={f.title} className="p-5 rounded-xl border border-border/50 bg-card/30">
-              <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center mb-3">
+            {
+              icon: <Zap className="w-5 h-5 text-primary" />,
+              title: 'Real-Time Test',
+              desc: 'Accurate browser-based measurement using Cloudflare edge servers.',
+              gradient: 'from-primary/10 to-transparent',
+            },
+            {
+              icon: <Globe className="w-5 h-5 text-accent" />,
+              title: 'ISP Comparison',
+              desc: 'See how your plan stacks up and discover faster options in your area.',
+              gradient: 'from-accent/10 to-transparent',
+            },
+            {
+              icon: <Shield className="w-5 h-5 text-purple-400" />,
+              title: 'Privacy First',
+              desc: 'No personal data stored. Results are anonymous and aggregated.',
+              gradient: 'from-purple-400/10 to-transparent',
+            },
+          ].map((f, i) => (
+            <motion.div
+              key={f.title}
+              className="glass-card-hover p-6 group"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 + i * 0.1 }}
+            >
+              <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${f.gradient} border border-white/[0.06] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                 {f.icon}
               </div>
-              <h3 className="font-semibold text-foreground mb-1">{f.title}</h3>
+              <h3 className="font-display font-semibold text-foreground mb-1.5">{f.title}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-            </div>
+            </motion.div>
           ))}
         </motion.div>
 
+        {/* Speed ratings */}
         <motion.div
           className="mt-16"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.5 }}
         >
-          <h2 className="text-xl font-bold mb-5" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+          <h2 className="text-xl font-display font-bold mb-6">
             What do these numbers mean?
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { range: '< 25 Mbps', label: 'Slow', color: 'text-red-400', desc: 'Basic browsing OK. Streaming in HD or video calls will struggle.' },
-              { range: '25–100 Mbps', label: 'Average', color: 'text-yellow-400', desc: 'Good for a single user. Multiple devices may slow things down.' },
-              { range: '100–500 Mbps', label: 'Good', color: 'text-primary', desc: 'Handles multiple 4K streams, gaming, and large file transfers.' },
-              { range: '500+ Mbps', label: 'Excellent', color: 'text-emerald-400', desc: 'Gigabit territory. Everything runs instantly, always.' },
+              { range: '< 25 Mbps', label: 'Slow', color: 'text-red-400', barColor: 'bg-red-400', barWidth: '15%', desc: 'Basic browsing OK. Streaming in HD or video calls will struggle.' },
+              { range: '25–100 Mbps', label: 'Average', color: 'text-yellow-400', barColor: 'bg-yellow-400', barWidth: '40%', desc: 'Good for a single user. Multiple devices may slow things down.' },
+              { range: '100–500 Mbps', label: 'Good', color: 'text-primary', barColor: 'bg-primary', barWidth: '70%', desc: 'Handles multiple 4K streams, gaming, and large file transfers.' },
+              { range: '500+ Mbps', label: 'Excellent', color: 'text-emerald-400', barColor: 'bg-emerald-400', barWidth: '100%', desc: 'Gigabit territory. Everything runs instantly, always.' },
             ].map(row => (
-              <div key={row.range} className="flex items-start gap-3 p-4 rounded-lg border border-border/30 bg-card/20">
-                <div>
-                  <div className={`text-sm font-bold ${row.color}`}>{row.range}</div>
-                  <div className="text-xs font-medium text-muted-foreground">{row.label}</div>
+              <div key={row.range} className="glass-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <span className={`text-sm font-bold font-display ${row.color}`}>{row.range}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{row.label}</span>
+                  </div>
                 </div>
-                <div className="h-8 w-px bg-border/50 flex-shrink-0" />
-                <p className="text-sm text-muted-foreground">{row.desc}</p>
+                <div className="h-1 rounded-full bg-white/[0.06] mb-3 overflow-hidden">
+                  <motion.div
+                    className={`h-full rounded-full ${row.barColor}`}
+                    initial={{ width: 0 }}
+                    whileInView={{ width: row.barWidth }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    viewport={{ once: true }}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">{row.desc}</p>
               </div>
             ))}
           </div>

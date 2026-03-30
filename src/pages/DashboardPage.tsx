@@ -31,7 +31,7 @@ function ManageSubscriptionButton({ customerId }: { customerId: string }) {
     <button
       onClick={handleManage}
       disabled={loading}
-      className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground border border-border/50 hover:text-foreground hover:border-border transition-colors disabled:opacity-60"
+      className="btn-ghost flex items-center gap-2 disabled:opacity-60"
     >
       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
       Manage Subscription
@@ -82,15 +82,24 @@ function SpeedTrend({ records }: { records: SpeedRecord[] }) {
       <p className="text-xs text-muted-foreground mb-2">Download trend (last {sorted.length} tests)</p>
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
         <defs>
-          <linearGradient id="speedGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="hsl(197 100% 50%)" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="hsl(185 100% 50%)" />
+          <linearGradient id="trendGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="hsl(197 100% 55%)" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="hsl(185 100% 55%)" />
+          </linearGradient>
+          <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="hsl(197 100% 55%)" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="hsl(197 100% 55%)" stopOpacity="0" />
           </linearGradient>
         </defs>
+        {/* Area fill */}
+        <polygon
+          points={`0,${height} ${pts.join(' ')} ${width},${height}`}
+          fill="url(#trendFill)"
+        />
         <polyline
           points={pts.join(' ')}
           fill="none"
-          stroke="url(#speedGrad)"
+          stroke="url(#trendGrad)"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -98,7 +107,11 @@ function SpeedTrend({ records }: { records: SpeedRecord[] }) {
         {sorted.map((r, i) => {
           const x = (i / (sorted.length - 1)) * width
           const y = height - (r.download_mbps / max) * (height - 8) - 4
-          return <circle key={i} cx={x} cy={y} r="3" fill="hsl(197 100% 50%)" />
+          return (
+            <g key={i}>
+              <circle cx={x} cy={y} r="4" fill="hsl(220 20% 7%)" stroke="hsl(197 100% 55%)" strokeWidth="1.5" />
+            </g>
+          )
         })}
       </svg>
     </div>
@@ -111,14 +124,12 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  // Redirect unauthenticated users
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       navigate({ to: '/' })
     }
   }, [isLoading, isAuthenticated, navigate])
 
-  // Fetch speed history
   const { data: history = [], isLoading: historyLoading } = useQuery({
     queryKey: ['speed-history', user?.id],
     enabled: !!user?.id,
@@ -135,7 +146,6 @@ export function DashboardPage() {
     },
   })
 
-  // Fetch saved providers
   const { data: saved = [], isLoading: savedLoading } = useQuery({
     queryKey: ['saved-providers', user?.id],
     enabled: !!user?.id,
@@ -151,14 +161,13 @@ export function DashboardPage() {
     },
   })
 
-  // Delete speed record
   const deleteRecord = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('user_speed_history')
         .delete()
         .eq('id', id)
-        .eq('user_id', user!.id) // RLS safety
+        .eq('user_id', user!.id)
       if (error) throw error
     },
     onSuccess: () => {
@@ -167,7 +176,6 @@ export function DashboardPage() {
     },
   })
 
-  // Unsave provider
   const unsaveProvider = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -190,14 +198,13 @@ export function DashboardPage() {
     toast.success('Signed out')
   }
 
-  // Stats from history
   const avgDownload = history.length ? Math.round(history.reduce((a, r) => a + r.download_mbps, 0) / history.length) : null
   const bestDownload = history.length ? Math.round(Math.max(...history.map(r => r.download_mbps))) : null
   const avgPing = history.length ? Math.round(history.reduce((a, r) => a + r.ping_ms, 0) / history.length) : null
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background pt-24 flex items-center justify-center">
+      <div className="min-h-screen pt-24 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
           <p className="text-sm text-muted-foreground">Loading your dashboard...</p>
@@ -211,7 +218,7 @@ export function DashboardPage() {
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'My Dashboard'
 
   return (
-    <div className="min-h-screen bg-background pt-24 pb-20 px-4 sm:px-6">
+    <div className="min-h-screen pt-20 pb-20 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}
@@ -221,11 +228,11 @@ export function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 border border-white/[0.08] flex items-center justify-center">
               <User className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+              <h1 className="text-xl font-display font-bold text-foreground">
                 {displayName}
               </h1>
               <p className="text-sm text-muted-foreground">{user?.email}</p>
@@ -234,15 +241,14 @@ export function DashboardPage() {
           <div className="flex items-center gap-2">
             <Link
               to="/"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-primary-foreground"
-              style={{ background: 'var(--gradient-primary)' }}
+              className="btn-primary flex items-center gap-2"
             >
               <Activity className="w-4 h-4" />
               Run New Test
             </Link>
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground border border-border/50 hover:border-border transition-colors"
+              className="btn-ghost flex items-center gap-2"
             >
               <LogOut className="w-4 h-4" />
               Sign Out
@@ -259,55 +265,60 @@ export function DashboardPage() {
         >
           {[
             { label: 'Tests Run', value: history.length.toString(), icon: <BarChart3 className="w-4 h-4 text-primary" />, sub: 'all time' },
-            { label: 'Avg Download', value: avgDownload ? `${avgDownload} Mbps` : '—', icon: <ArrowDown className="w-4 h-4 text-primary" />, sub: 'across all tests' },
-            { label: 'Best Speed', value: bestDownload ? `${bestDownload} Mbps` : '—', icon: <Zap className="w-4 h-4 text-yellow-400" />, sub: 'your record' },
-            { label: 'Avg Ping', value: avgPing ? `${avgPing} ms` : '—', icon: <Timer className="w-4 h-4 text-accent" />, sub: 'average latency' },
-          ].map(stat => (
-            <div key={stat.label} className="p-4 rounded-xl border border-border/50 bg-card/30">
+            { label: 'Avg Download', value: avgDownload ? `${avgDownload} Mbps` : '\u2014', icon: <ArrowDown className="w-4 h-4 text-primary" />, sub: 'across all tests' },
+            { label: 'Best Speed', value: bestDownload ? `${bestDownload} Mbps` : '\u2014', icon: <Zap className="w-4 h-4 text-yellow-400" />, sub: 'your record' },
+            { label: 'Avg Ping', value: avgPing ? `${avgPing} ms` : '\u2014', icon: <Timer className="w-4 h-4 text-accent" />, sub: 'average latency' },
+          ].map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              className="glass-card p-4"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 + i * 0.03 }}
+            >
               <div className="flex items-center gap-2 mb-2">
                 {stat.icon}
                 <span className="text-xs text-muted-foreground">{stat.label}</span>
               </div>
-              <div className="text-xl font-bold text-foreground" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+              <div className="text-xl font-display font-bold text-foreground">
                 {stat.value}
               </div>
-              <div className="text-xs text-muted-foreground/60 mt-0.5">{stat.sub}</div>
-            </div>
+              <div className="text-xs text-muted-foreground/50 mt-0.5">{stat.sub}</div>
+            </motion.div>
           ))}
         </motion.div>
 
         {/* Subscription card */}
         <motion.div
-          className="mb-8 p-5 rounded-2xl border bg-card/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-          style={{
-            borderColor: isPremium ? 'hsl(197 100% 50% / 0.4)' : 'hsl(var(--border) / 0.5)',
-            background: isPremium ? 'hsl(197 100% 50% / 0.05)' : undefined,
-          }}
+          className={`mb-8 p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+            isPremium
+              ? 'border-primary/30 bg-primary/[0.03]'
+              : 'glass-card'
+          }`}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08 }}
         >
           <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: isPremium ? 'hsl(197 100% 50% / 0.15)' : 'hsl(var(--secondary))' }}
-            >
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              isPremium ? 'bg-primary/15' : 'bg-white/[0.04]'
+            }`}>
               <Crown className="w-5 h-5 text-primary" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-foreground" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                <span className="font-display font-bold text-foreground">
                   {planId === 'unlimited' ? 'Unlimited Monthly' : planId === 'single' ? 'Single Report' : 'Free Plan'}
                 </span>
                 {canAccessPremium && (
-                  <span className="text-xs font-semibold text-primary bg-primary/15 border border-primary/30 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-semibold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
                     Premium
                   </span>
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
                 {isPremium
-                  ? `Unlimited premium reports · ${subscription?.cancel_at_period_end ? 'Cancels at period end' : 'Renews monthly'}`
+                  ? `Unlimited premium reports \u00B7 ${subscription?.cancel_at_period_end ? 'Cancels at period end' : 'Renews monthly'}`
                   : hasSingleReport
                   ? `${reportsRemaining} report${reportsRemaining !== 1 ? 's' : ''} remaining`
                   : 'Upgrade to unlock premium diagnostic reports'}
@@ -319,13 +330,10 @@ export function DashboardPage() {
               <ManageSubscriptionButton customerId={subscription.stripe_customer_id} />
             ) : null}
             <Link
-              to="/premium"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
-              style={
-                canAccessPremium
-                  ? { color: 'hsl(var(--muted-foreground))', border: '1px solid hsl(var(--border) / 0.5)' }
-                  : { background: 'var(--gradient-primary)', color: 'hsl(var(--primary-foreground))' }
-              }
+              to="/"
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 ${
+                canAccessPremium ? 'btn-ghost' : 'btn-primary'
+              }`}
             >
               <Zap className="w-4 h-4" />
               {canAccessPremium ? 'View Plans' : 'Upgrade'}
@@ -343,7 +351,7 @@ export function DashboardPage() {
             transition={{ delay: 0.1 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold flex items-center gap-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+              <h2 className="text-base font-display font-bold flex items-center gap-2">
                 <Clock className="w-4 h-4 text-primary" />
                 Speed History
               </h2>
@@ -351,7 +359,7 @@ export function DashboardPage() {
             </div>
 
             {history.length >= 2 && (
-              <div className="p-4 rounded-xl border border-border/50 bg-card/30 mb-4">
+              <div className="glass-card p-4 mb-4">
                 <SpeedTrend records={history.slice(0, 20)} />
               </div>
             )}
@@ -359,18 +367,17 @@ export function DashboardPage() {
             {historyLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="h-20 rounded-xl border border-border/30 bg-card/20 animate-pulse" />
+                  <div key={i} className="h-20 rounded-xl border border-white/[0.04] bg-white/[0.02] animate-pulse" />
                 ))}
               </div>
             ) : history.length === 0 ? (
-              <div className="p-8 rounded-xl border border-border/40 bg-card/20 text-center">
+              <div className="glass-card p-8 text-center">
                 <Activity className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
                 <p className="text-sm font-medium text-foreground mb-1">No tests yet</p>
                 <p className="text-xs text-muted-foreground mb-4">Run your first speed test to start tracking history.</p>
                 <Link
                   to="/"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-primary-foreground"
-                  style={{ background: 'var(--gradient-primary)' }}
+                  className="btn-primary inline-flex items-center gap-2 text-xs"
                 >
                   <Activity className="w-3.5 h-3.5" />
                   Run Speed Test
@@ -388,31 +395,22 @@ export function DashboardPage() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -10 }}
                         transition={{ delay: i * 0.03 }}
-                        className="group flex items-center gap-4 p-4 rounded-xl border border-border/40 bg-card/20 hover:border-border/70 hover:bg-card/40 transition-all"
+                        className="group glass-card-hover flex items-center gap-4 p-4"
                       >
                         <div className="flex-shrink-0 text-center min-w-[64px]">
-                          <div
-                            className="text-lg font-black"
-                            style={{
-                              fontFamily: 'Space Grotesk, sans-serif',
-                              background: 'var(--gradient-primary)',
-                              WebkitBackgroundClip: 'text',
-                              WebkitTextFillColor: 'transparent',
-                              backgroundClip: 'text',
-                            }}
-                          >
+                          <div className="text-lg font-display font-black gradient-text">
                             {record.download_mbps >= 100
                               ? Math.round(record.download_mbps)
                               : Math.round(record.download_mbps * 10) / 10}
                           </div>
-                          <div className="text-xs text-muted-foreground">Mbps ↓</div>
+                          <div className="text-xs text-muted-foreground">Mbps \u2193</div>
                         </div>
 
-                        <div className="w-px h-10 bg-border/40 flex-shrink-0" />
+                        <div className="w-px h-10 bg-white/[0.06] flex-shrink-0" />
 
                         <div className="flex items-center gap-4 flex-1 min-w-0 flex-wrap">
                           <div className="text-xs">
-                            <span className="text-muted-foreground">↑ </span>
+                            <span className="text-muted-foreground">\u2191 </span>
                             <span className="text-accent font-medium">{Math.round(record.upload_mbps)} Mbps</span>
                           </div>
                           <div className="text-xs">
@@ -452,7 +450,7 @@ export function DashboardPage() {
             transition={{ delay: 0.15 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold flex items-center gap-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+              <h2 className="text-base font-display font-bold flex items-center gap-2">
                 <Bookmark className="w-4 h-4 text-primary" />
                 Saved Providers
               </h2>
@@ -462,11 +460,11 @@ export function DashboardPage() {
             {savedLoading ? (
               <div className="space-y-2">
                 {[1, 2].map(i => (
-                  <div key={i} className="h-16 rounded-xl border border-border/30 bg-card/20 animate-pulse" />
+                  <div key={i} className="h-16 rounded-xl border border-white/[0.04] bg-white/[0.02] animate-pulse" />
                 ))}
               </div>
             ) : saved.length === 0 ? (
-              <div className="p-6 rounded-xl border border-border/40 bg-card/20 text-center">
+              <div className="glass-card p-6 text-center">
                 <Bookmark className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
                 <p className="text-sm font-medium text-foreground mb-1">No saved providers</p>
                 <p className="text-xs text-muted-foreground mb-4">Bookmark ISPs from the Compare page.</p>
@@ -487,7 +485,7 @@ export function DashboardPage() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: 10 }}
                       transition={{ delay: i * 0.04 }}
-                      className="group p-3.5 rounded-xl border border-border/40 bg-card/20 hover:border-border/70 hover:bg-card/40 transition-all"
+                      className="group glass-card-hover p-3.5"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
@@ -495,7 +493,7 @@ export function DashboardPage() {
                           {provider.isp_type && (
                             <div className="text-xs text-muted-foreground mt-0.5">{provider.isp_type}</div>
                           )}
-                          <div className="text-xs text-muted-foreground/60 mt-1">
+                          <div className="text-xs text-muted-foreground/50 mt-1">
                             Saved {formatDate(provider.created_at)}
                           </div>
                         </div>
@@ -529,7 +527,7 @@ export function DashboardPage() {
             {saved.length > 0 && (
               <Link
                 to="/compare"
-                className="mt-3 w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg border border-border/50 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+                className="mt-3 w-full btn-ghost flex items-center justify-center gap-1.5 text-xs"
               >
                 <TrendingUp className="w-3.5 h-3.5" />
                 Browse More Providers
